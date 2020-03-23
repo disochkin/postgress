@@ -2,7 +2,6 @@ import psycopg2
 from prettytable import PrettyTable
 
 
-
 def common_query(command):
     conn = None
     try:
@@ -22,14 +21,12 @@ def common_query(command):
 def batch_query(command):
     conn = None
     try:
-        conn = psycopg2.connect(dbname='app', user='appadmin', password='rdfxf', host='192.168.23.20')
-        print(command)
+        conn = psycopg2.connect(dbname='', user='', password='', host='192.168.xxx.xxx')
         cur = conn.cursor()
         for item in command:
             cur.execute(item)
         conn.commit()
         rows = cur.fetchall()
-        print(rows)
         cur.close()
     except (Exception, psycopg2.DatabaseError) as error:
         print("Error: ", error)
@@ -42,7 +39,7 @@ def get_data(command):
     result = {}
     conn = None
     try:
-        conn = psycopg2.connect(dbname='app', user='appadmin', password='rdfxf', host='192.168.23.20')
+        conn = psycopg2.connect(dbname='', user='', password='', host='192.168.xxx.xxx')
         cur = conn.cursor()
         cur.execute(command)
         colnames = [desc[0] for desc in cur.description]
@@ -106,6 +103,12 @@ def get_student(student_id):
     print(result)
 
 
+def add_student(values):
+    student=[]
+    student.append(values)
+    add_students(student)
+
+
 if __name__ == '__main__':
     create_tables()
     add_course({"name": "First"})
@@ -115,13 +118,14 @@ if __name__ == '__main__':
     add_course({"name": "Fifth"})
 
     students = [{"name": "Vasya", "birth": "1990-09-01", "course_id": "1"},
-                {"name": "Jonh Dow", "birth": "1991-09-01", "course_id": "2"},
+                {"name": "Jonh Dow", "birth": "1991-09-01", "course_id": "1"},
                 {"name": "Key Smith", "birth": "1992-09-01", "course_id": "3"},
                 {"name": "Bill Gilbert", "birth": "1993-09-01", "course_id": "4"}]
 
     add_students(students)
+    add_student({"name": "John Snow", "birth": "1970-09-01", "course_id": "5"})
     get_students("1")
-    get_student("1")
+    get_student("4")
 
 
 
