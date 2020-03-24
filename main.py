@@ -5,7 +5,7 @@ from prettytable import PrettyTable
 def common_query(command):
     conn = None
     try:
-        conn = psycopg2.connect(dbname='app', user='appadmin', password='rdfxf', host='192.168.23.20')
+        conn = psycopg2.connect(dbname='', user='', password='', host='192.168.x.x')
         cur = conn.cursor()
         cur.execute(command)
         conn.commit()
@@ -21,7 +21,7 @@ def common_query(command):
 def batch_query(command):
     conn = None
     try:
-        conn = psycopg2.connect(dbname='', user='', password='', host='192.168.xxx.xxx')
+        conn = psycopg2.connect(dbname='', user='', password='', host='192.168.x.x')
         cur = conn.cursor()
         for item in command:
             cur.execute(item)
@@ -39,7 +39,7 @@ def get_data(command):
     result = {}
     conn = None
     try:
-        conn = psycopg2.connect(dbname='', user='', password='', host='192.168.xxx.xxx')
+        conn = psycopg2.connect(dbname='', user='', password='', host='192.168.x.x')
         cur = conn.cursor()
         cur.execute(command)
         colnames = [desc[0] for desc in cur.description]
@@ -71,7 +71,11 @@ def add_course(values):
 
 
 def get_students(course_id):
-    student_data = get_data(f"select name, to_char(birth, 'YYYY-MM-DD') as birth, gpa from student where course_id ={course_id} ;")
+    student_data = get_data(
+        f"select name,birth from student left join student_course on student_course.student_id=student.id where \
+        student_course.course_id={course_id};")
+    # select name,birth from student left join student_course on student_course.student_id=student.id where student_course.course_id=2;
+    # student_data = get_data(f"select name, to_char(birth, 'YYYY-MM-DD') as birth, gpa from student where course_id ={course_id} ;")
     result = PrettyTable()
     result.field_names = student_data["header"]
     for item in student_data["payload"]:
@@ -80,22 +84,29 @@ def get_students(course_id):
 
 
 def create_tables():
-    common_query("create table if not exists course (id serial primary key, name character varying(100) not null)")
-    common_query("create table if not exists student (id serial primary key, name character varying(100) not null,\
-    gpa numeric(10,2), birth timestamp with time zone, course_id integer, FOREIGN KEY (course_id) REFERENCES course (id));")
+    common_query(
+        "create table if not exists course (id integer not null, name character varying(100) not null, UNIQUE (id));")
+    common_query("create table if not exists student (id integer not null, name character varying(100) not null,\
+    gpa numeric(10,2), birth timestamp with time zone, UNIQUE (id));")
+    common_query("create table student_course (id serial primary key, course_id integer, student_id integer, \
+    FOREIGN KEY (course_id) REFERENCES course (id), FOREIGN KEY (student_id) REFERENCES student (id));")
 
 
-def add_students(values):
+def add_students(values, course_id=None):
     query = []
     for item in values:
         columns_name = ','.join(item.keys())
         data = "'" + "','".join(item.values()) + "'"
         query.append(f"insert into student ({columns_name}) values ({data})")
+        if course_id != None:
+            student_id = item["id"]
+            query.append(f"insert into student_course (student_id,course_id) values ({student_id},{course_id})")
     batch_query(query)
 
 
 def get_student(student_id):
-    student_data = get_data(f"select name, to_char(birth, 'YYYY-MM-DD') as birth, gpa from student where id ={student_id} ;")
+    student_data = get_data(
+        f"select name, to_char(birth, 'YYYY-MM-DD') as birth, gpa from student where id ={student_id} ;")
     result = PrettyTable()
     result.field_names = student_data["header"]
     for item in student_data["payload"]:
@@ -104,28 +115,33 @@ def get_student(student_id):
 
 
 def add_student(values):
-    student=[]
+    student = []
     student.append(values)
     add_students(student)
 
 
 if __name__ == '__main__':
     create_tables()
-    add_course({"name": "First"})
-    add_course({"name": "Second"})
-    add_course({"name": "Third"})
-    add_course({"name": "Fourth"})
-    add_course({"name": "Fifth"})
+    add_course({"id": "1", "name": "First"})
+    add_course({"id": "2", "name": "Second"})
+    add_course({"id": "3", "name": "Third"})
+    add_course({"id": "4", "name": "Fourth"})
+    add_course({"id": "5", "name": "Fifth"})
 
-    students = [{"name": "Vasya", "birth": "1990-09-01", "course_id": "1"},
-                {"name": "Jonh Dow", "birth": "1991-09-01", "course_id": "1"},
-                {"name": "Key Smith", "birth": "1992-09-01", "course_id": "3"},
-                {"name": "Bill Gilbert", "birth": "1993-09-01", "course_id": "4"}]
+    students = [{"id": "1", "name": "Vasya", "birth": "1990-09-01"},
+                {"id": "2", "name": "Jonh Dow", "birth": "1991-09-01"}]
+    # создаем студентов и записываем на курс с id=1
+    add_students(students, 1)
 
-    add_students(students)
-    add_student({"name": "John Snow", "birth": "1970-09-01", "course_id": "5"})
+    students = [{"id": "3", "name": "Key Smith", "birth": "1992-09-01"},
+                {"id": "4", "name": "Bill Gilbert", "birth": "1993-09-01"}]
+    # создаем студентов и записываем на курс с id=2
+    add_students(students, 2)
+
+    # создаем студента
+    add_student({"name": "John Snow", "birth": "1970-09-01"})
+
+    # запрос студентов с курса id=1
     get_students("1")
-    get_student("4")
-
-
-
+    # запрос студента с id=2
+    get_student("2")
